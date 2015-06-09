@@ -46,10 +46,50 @@ def drop_least_frequently_used_maybe(xs0, size):
 def fetch(x):
   return 2*x
 
-def pretty_print(req, size, requests):
+def pretty_print(rows0, req, size, requests):
   global mailbox
   global rows
-  pprint((req, mailbox, rows))
+  held0 = rows0.keys()
+  b = "[]"
+  if req in held0:
+    b = "()"
+  held = rows.keys()
+  slice0 = mailbox[0:(requests - 1)]
+  slice1 = [req]
+  for x in slice0:
+    slice1.append(x)
+  buffer = ",".join(mapstr(slice1))
+  padding0 = queue_chars(requests) + padding()[0] - len(buffer)
+  buffer = buffer + " "*padding0
+  buffer = buffer + str(req)
+  buffer = buffer + " "
+  for x in held:
+    if x == req:
+      buffer = buffer + " " + b[0] + str(x) + b[1]
+    else:
+      buffer = buffer + "  " + str(x) + " "
+  print(buffer + "")
+  #pprint((req, mailbox, rows))
+
+def qreqs():
+  return "Zahtjevi"
+
+def queue_chars(x):
+  return 2*x-1
+
+def padding():
+  return (4, 3, 3)
+
+def mapstr(xs):
+  return map(lambda x: str(x), xs)
+
+def print_header(size, requests):
+  buffer = qreqs()
+  padding0 = queue_chars(requests) + padding()[0] - len(buffer)
+  buffer = buffer + " "*padding0 + "#N  "
+  buffer = buffer + (" "*padding()[1]).join(mapstr(range(1, size + 1)))
+  print(buffer)
+  print("-" * len(buffer))
 
 ###
 
@@ -69,10 +109,11 @@ class cache_server(threading.Thread):
         self.ticks = self.ticks + 1
         time.sleep(0.01)
       else:
+        rows0 = dict(rows)
         self.ticks = 0
         req = mailbox.pop(0)
         rows = respond(req, rows, self.size)[1]
-        pretty_print(req, self.size, self.requests)
+        pretty_print(rows0, req, self.size, self.requests)
 
 class mailbox_server(threading.Thread):
   def __init__ (self, requests):
@@ -101,14 +142,11 @@ rows    = {}
 if __name__ == "__main__":
   size = 5
   requests = 5
-  pprint(sys.argv)
   if len(sys.argv) > 1:
     size = int(sys.argv[1])
   if len(sys.argv) > 2:
     requests = int(sys.argv[2])
-  for x in range(0, requests):
-    global mailbox
-    mailbox.append(randint(0, 9))
+  print_header(size, requests)
   t = cache_server(size, requests)
   t.start()
   m = mailbox_server(requests)
