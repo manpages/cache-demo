@@ -9,9 +9,9 @@ def respond(req, rows0, size=5):
   if req in rows:
     return (rows[req]["line"], bump_all_but(req, rows))
   else:
-    return (fetch(req), cache(req, bump_all(
-                          drop_least_frequently_used_maybe(rows, size)
-           )))
+    (index, rows1) = drop_least_frequently_used_maybe(rows, size)
+    rows2          = bump_all(rows1)
+    return (fetch(req), cache(req, rows2, index))
 
 ###
 
@@ -22,9 +22,9 @@ def bump_all_but(x, xs0):
       xs[k]["age_bits"] = xs[k]["age_bits"] + 1
   return xs
 
-def cache(x, xs0):
+def cache(x, xs0, next_index):
   xs = dict(xs0)
-  xs[x] = {"age_bits": 0, "line": fetch(x)}
+  xs[x] = {"age_bits": 0, "line": fetch(x), "index": next_index}
   return xs
 
 def bump_all(xs0):
@@ -36,12 +36,14 @@ def bump_all(xs0):
 def drop_least_frequently_used_maybe(xs0, size):
   xs = dict(xs0)
   maximum_age_bits = (0, 0)
+  index = len(xs)
   for k in xs:
     if xs[k]["age_bits"] > maximum_age_bits[1]:
       maximum_age_bits = (k, xs[k]["age_bits"])
   if len(xs) >= size and maximum_age_bits[0] in xs:
+    index = xs[maximum_age_bits[0]]['index']
     del xs[maximum_age_bits[0]]
-  return xs
+  return (index, xs)
 
 def fetch(x):
   return 2*x
@@ -53,7 +55,9 @@ def pretty_print(rows0, req, size, requests):
   b = "[]"
   if req in held0:
     b = "()"
-  held = rows.keys()
+  rows1 = {}
+  for k in rows:
+    rows1[rows[k]["index"]] = k
   slice0 = mailbox[0:(requests - 1)]
   slice1 = [req]
   for x in slice0:
@@ -63,11 +67,11 @@ def pretty_print(rows0, req, size, requests):
   buffer = buffer + " "*padding0
   buffer = buffer + str(req)
   buffer = buffer + " "
-  for x in held:
-    if x == req:
-      buffer = buffer + " " + b[0] + str(x) + b[1]
+  for k in rows1:
+    if rows1[k] == req:
+      buffer = buffer + " " + b[0] + str(rows1[k]) + b[1]
     else:
-      buffer = buffer + "  " + str(x) + " "
+      buffer = buffer + "  " + str(rows1[k]) + " "
   print(buffer + "")
   #pprint((req, mailbox, rows))
 
